@@ -1,0 +1,10 @@
+# Normalize all text files to LF in the repository to avoid CRLF issues in
+# Containerfiles, shell snippets and YAML when checked out on Linux/CI.
+* text=auto eol=lf
+
+# Explicit binary types (never touch line endings)
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.pdf binary

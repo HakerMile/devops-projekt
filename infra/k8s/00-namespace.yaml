@@ -1,0 +1,11 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: secure-event-ticketing
+  labels:
+    app.kubernetes.io/part-of: secure-event-ticketing
+    # Pod Security Admission: enforce a safe baseline, warn on anything that
+    # would fail the stricter "restricted" profile.
+    pod-security.kubernetes.io/enforce: baseline
+    pod-security.kubernetes.io/warn: restricted
+    pod-security.kubernetes.io/audit: restricted

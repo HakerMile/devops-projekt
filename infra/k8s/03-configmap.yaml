@@ -1,0 +1,50 @@
+# Non-sensitive application configuration. Secrets (DB credentials) live in a
+# separate Secret object - see 04-secret.example.yaml.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: ticketing-config
+  namespace: secure-event-ticketing
+data:
+  NODE_ENV: "production"
+
+  # PostgreSQL connection (credentials come from the Secret)
+  POSTGRES_HOST: "postgres"
+  POSTGRES_PORT: "5432"
+  POSTGRES_DB: "ticketing"
+
+  # Redis connection
+  REDIS_HOST: "redis"
+  REDIS_PORT: "6379"
+
+  # Service ports
+  API_PORT: "8080"
+  FRONTEND_PORT: "3000"
+
+  # Worker / queue
+  QUEUE_NAME: "ticket_orders"
+
+  # Browser -> API base URL. Served same-origin behind the Ingress under /api;
+  # the API container strips the /api prefix itself (see api/src/server.js).
+  API_BASE_URL: "/api"
+---
+# PostgreSQL schema bootstrap. Mounted into /docker-entrypoint-initdb.d and run
+# only on first initialization of an empty data directory.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: postgres-init
+  namespace: secure-event-ticketing
+data:
+  init.sql: |
+    CREATE TABLE IF NOT EXISTS ticket_orders (
+        id SERIAL PRIMARY KEY,
+        order_id TEXT UNIQUE NOT NULL,
+        event_id TEXT NOT NULL,
+        customer_email TEXT NOT NULL,
+        quantity INTEGER NOT NULL CHECK (quantity > 0),
+        status TEXT NOT NULL,
+        created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_ticket_orders_created_at ON ticket_orders (created_at DESC);

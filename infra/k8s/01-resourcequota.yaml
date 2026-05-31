@@ -1,0 +1,34 @@
+# Namespace-wide guardrails: a hard cap on total resource consumption plus
+# sensible per-container defaults so every pod gets requests/limits even if a
+# manifest forgets to set them.
+apiVersion: v1
+kind: ResourceQuota
+metadata:
+  name: ticketing-quota
+  namespace: secure-event-ticketing
+spec:
+  hard:
+    requests.cpu: "2"
+    requests.memory: 2Gi
+    limits.cpu: "4"
+    limits.memory: 4Gi
+    pods: "20"
+    persistentvolumeclaims: "4"
+---
+apiVersion: v1
+kind: LimitRange
+metadata:
+  name: ticketing-limits
+  namespace: secure-event-ticketing
+spec:
+  limits:
+    - type: Container
+      default: # default limit if a container omits one
+        cpu: 250m
+        memory: 256Mi
+      defaultRequest: # default request if a container omits one
+        cpu: 100m
+        memory: 128Mi
+      max:
+        cpu: "1"
+        memory: 1Gi

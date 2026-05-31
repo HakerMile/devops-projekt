@@ -1,0 +1,16 @@
+# Local secrets / environment - NEVER commit (use .env.example as the template)
+.env
+.env.*
+!.env.example
+
+# Node
+node_modules/
+npm-debug.log*
+yarn-error.log*
+
+# Logs / OS / editor cruft
+*.log
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/

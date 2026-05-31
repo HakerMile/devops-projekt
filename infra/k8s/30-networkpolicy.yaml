@@ -1,0 +1,104 @@
+# =============================================================================
+# Traffic segmentation (zero-trust style: default-deny, then explicit allows).
+#
+# Tiers:           web (frontend)  ->  api  ->  data (postgres, redis)
+#                                       ^
+#                                     worker -> data
+#
+# Key guarantees:
+#   - The data tier (postgres, redis) accepts connections ONLY from api/worker.
+#   - The worker accepts NO inbound traffic at all.
+#   - Everything is denied unless a policy below explicitly allows it.
+#
+# Egress is left to the default (allow) to keep DNS working without extra
+# plumbing; tighten with egress rules if your CNI/policy requires it.
+# =============================================================================
+
+# 1) Default deny all ingress for every pod in the namespace.
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: default-deny-ingress
+  namespace: secure-event-ticketing
+spec:
+  podSelector: {}
+  policyTypes: ["Ingress"]
+---
+# 2) Frontend: public entry point (reached via the Ingress controller).
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-frontend-ingress
+  namespace: secure-event-ticketing
+spec:
+  podSelector:
+    matchLabels:
+      app: frontend
+  policyTypes: ["Ingress"]
+  ingress:
+    - ports:
+        - protocol: TCP
+          port: 3000
+---
+# 3) API: reached by the browser via the Ingress (/api) and by the frontend
+#    tier. Exposed on 8080.
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-api-ingress
+  namespace: secure-event-ticketing
+spec:
+  podSelector:
+    matchLabels:
+      app: api
+  policyTypes: ["Ingress"]
+  ingress:
+    - ports:
+        - protocol: TCP
+          port: 8080
+---
+# 4) PostgreSQL: only the api and worker pods may connect on 5432.
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-postgres-from-app
+  namespace: secure-event-ticketing
+spec:
+  podSelector:
+    matchLabels:
+      app: postgres
+  policyTypes: ["Ingress"]
+  ingress:
+    - from:
+        - podSelector:
+            matchLabels:
+              app: api
+        - podSelector:
+            matchLabels:
+              app: worker
+      ports:
+        - protocol: TCP
+          port: 5432
+---
+# 5) Redis: only the api and worker pods may connect on 6379.
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-redis-from-app
+  namespace: secure-event-ticketing
+spec:
+  podSelector:
+    matchLabels:
+      app: redis
+  policyTypes: ["Ingress"]
+  ingress:
+    - from:
+        - podSelector:
+            matchLabels:
+              app: api
+        - podSelector:
+            matchLabels:
+              app: worker
+      ports:
+        - protocol: TCP
+          port: 6379

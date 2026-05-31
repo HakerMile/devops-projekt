@@ -1,0 +1,178 @@
+# =============================================================================
+# Secure Event Ticketing Platform - local developer environment
+#
+#   Start the whole stack:   docker compose up --build      (or: podman compose ...)
+#   Stop it:                 docker compose down
+#
+# Highlights:
+#   - all five services (frontend, api, worker, postgres, redis)
+#   - hot-reload for the Node services (dev build target + bind-mounted src)
+#   - health checks on every service
+#   - named volume for PostgreSQL persistence
+#   - network segmentation: the frontend cannot reach the database/redis
+# =============================================================================
+
+name: secure-event-ticketing
+
+services:
+  # ---- PostgreSQL -------------------------------------------------------
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      # Schema bootstrap - only runs on first init (empty data dir).
+      - ./infra/postgres/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    networks:
+      - backend
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    restart: unless-stopped
+
+  # ---- Redis (queue / cache) -------------------------------------------
+  redis:
+    image: redis:7-alpine
+    command: ["redis-server", "--save", "60", "1", "--loglevel", "warning"]
+    networks:
+      - backend
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 5s
+    restart: unless-stopped
+
+  # ---- API service ------------------------------------------------------
+  api:
+    build:
+      context: ./api
+      dockerfile: Containerfile
+      target: dev            # local dev image with nodemon for hot-reload
+    environment:
+      NODE_ENV: development
+      API_PORT: ${API_PORT}
+      POSTGRES_HOST: ${POSTGRES_HOST}
+      POSTGRES_PORT: ${POSTGRES_PORT}
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      REDIS_HOST: ${REDIS_HOST}
+      REDIS_PORT: ${REDIS_PORT}
+      QUEUE_NAME: ${QUEUE_NAME}
+      CHOKIDAR_USEPOLLING: "true"   # reliable file watching over bind mounts
+    ports:
+      - "${API_PORT}:8080"
+    volumes:
+      - ./api/src:/app/src         # bind-mount source for hot-reload
+    networks:
+      - backend                    # talks to postgres + redis
+      - frontend                   # reachable from the frontend tier
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      # Dependency-free check using Node's built-in fetch (Node 18+).
+      test:
+        - CMD
+        - node
+        - -e
+        - "fetch('http://127.0.0.1:8080/healthz').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+    restart: unless-stopped
+
+  # ---- Background worker ------------------------------------------------
+  worker:
+    build:
+      context: ./worker
+      dockerfile: Containerfile
+      target: dev
+    environment:
+      NODE_ENV: development
+      POSTGRES_HOST: ${POSTGRES_HOST}
+      POSTGRES_PORT: ${POSTGRES_PORT}
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      REDIS_HOST: ${REDIS_HOST}
+      REDIS_PORT: ${REDIS_PORT}
+      QUEUE_NAME: ${QUEUE_NAME}
+      CHOKIDAR_USEPOLLING: "true"
+    volumes:
+      - ./worker/src:/app/src
+    networks:
+      - backend                    # only needs postgres + redis, no web tier
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      # No HTTP port - verify the worker process is alive.
+      test: ["CMD-SHELL", "pgrep -f worker.js > /dev/null || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 15s
+    restart: unless-stopped
+
+  # ---- Web frontend -----------------------------------------------------
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Containerfile
+      target: dev
+    environment:
+      NODE_ENV: development
+      FRONTEND_PORT: ${FRONTEND_PORT}
+      # The browser (on the host) calls the API directly on the published port.
+      API_BASE_URL: ${API_BASE_URL}
+      CHOKIDAR_USEPOLLING: "true"
+    ports:
+      - "${FRONTEND_PORT}:3000"
+    volumes:
+      - ./frontend/src:/app/src
+    networks:
+      - frontend                   # isolated from postgres/redis on purpose
+    depends_on:
+      api:
+        condition: service_healthy
+    healthcheck:
+      test:
+        - CMD
+        - node
+        - -e
+        - "fetch('http://127.0.0.1:3000/healthz').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 15s
+    restart: unless-stopped
+
+# ---- Persistent storage ---------------------------------------------------
+volumes:
+  postgres_data:
+
+# ---- Network segmentation -------------------------------------------------
+# Two isolated bridge networks. The `api` is the only service that joins both,
+# acting as the controlled bridge between the web tier and the data tier.
+#   frontend  <-> api            (web tier)
+#   api / worker <-> postgres/redis (data tier)
+# The frontend has NO route to postgres or redis.
+networks:
+  frontend:
+    driver: bridge
+  backend:
+    driver: bridge

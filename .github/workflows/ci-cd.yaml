@@ -1,0 +1,227 @@
+# =============================================================================
+# CI/CD - Secure Event Ticketing Platform
+#
+#   build  ->  Trivy security gate  ->  push to registry  ->  deploy to k8s
+#
+# Pipeline:
+#   1. iac-scan        - Trivy misconfig scan of Containerfiles + k8s manifests
+#   2. build-scan-push - per-service (api/worker/frontend): build the minimal
+#                        runtime image, scan it with Trivy (HIGH/CRITICAL gate),
+#                        upload SARIF, then push to GHCR (only on main / tags)
+#   3. deploy          - roll the new images out to Kubernetes (only on main / tags)
+#
+# Required repository configuration (Settings -> Secrets and variables):
+#   Secrets:
+#     KUBE_CONFIG        - base64-encoded kubeconfig for the target cluster
+#     POSTGRES_PASSWORD  - DB password (used to (re)create the k8s Secret)
+#   Variables (optional):
+#     POSTGRES_USER      - DB user (defaults to "ticketing_user")
+#   GITHUB_TOKEN is provided automatically and is used to push to GHCR.
+# =============================================================================
+name: ci-cd
+
+on:
+  push:
+    branches: ["main"]
+    tags: ["v*"]
+  pull_request:
+    branches: ["main"]
+
+# Cancel superseded runs on the same ref.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  REGISTRY: ghcr.io
+  NAMESPACE: secure-event-ticketing
+
+permissions:
+  contents: read
+
+jobs:
+  # ---------------------------------------------------------------------------
+  # 1. Infrastructure-as-Code scan (Containerfiles + Kubernetes manifests)
+  # ---------------------------------------------------------------------------
+  iac-scan:
+    name: IaC misconfig scan
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      security-events: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Trivy config scan (Containerfiles + k8s manifests)
+        uses: aquasecurity/trivy-action@0.28.0
+        with:
+          scan-type: config
+          scan-ref: .
+          severity: HIGH,CRITICAL
+          exit-code: "1" # fail on misconfigured Dockerfiles/manifests
+          format: table
+
+  # ---------------------------------------------------------------------------
+  # 2. Build -> scan (gate) -> push, one job per service
+  # ---------------------------------------------------------------------------
+  build-scan-push:
+    name: build/scan/push (${{ matrix.service }})
+    runs-on: ubuntu-latest
+    needs: iac-scan
+    permissions:
+      contents: read
+      packages: write # push to GHCR
+      security-events: write # upload SARIF
+    strategy:
+      fail-fast: false
+      matrix:
+        service: [api, worker, frontend]
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Compute image reference
+        id: img
+        run: |
+          owner="$(echo '${{ github.repository_owner }}' | tr '[:upper:]' '[:lower:]')"
+          echo "image=${REGISTRY}/${owner}/ticketing-${{ matrix.service }}" >> "$GITHUB_OUTPUT"
+          echo "tag=${GITHUB_SHA::12}" >> "$GITHUB_OUTPUT"
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      # Build the minimal, non-root *runtime* stage and load it into the local
+      # daemon so it can be scanned before it is ever pushed.
+      - name: Build image (runtime stage)
+        uses: docker/build-push-action@v6
+        with:
+          context: ./${{ matrix.service }}
+          file: ./${{ matrix.service }}/Containerfile
+          target: runtime
+          load: true
+          push: false
+          tags: ${{ steps.img.outputs.image }}:${{ steps.img.outputs.tag }}
+          cache-from: type=gha,scope=${{ matrix.service }}
+          cache-to: type=gha,scope=${{ matrix.service }},mode=max
+
+      # Produce SARIF for the GitHub Security tab (does not fail the build).
+      - name: Trivy scan (SARIF report)
+        uses: aquasecurity/trivy-action@0.28.0
+        with:
+          scan-type: image
+          image-ref: ${{ steps.img.outputs.image }}:${{ steps.img.outputs.tag }}
+          format: sarif
+          output: trivy-${{ matrix.service }}.sarif
+          severity: HIGH,CRITICAL,MEDIUM
+          exit-code: "0"
+
+      - name: Upload SARIF to GitHub Security
+        if: always()
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: trivy-${{ matrix.service }}.sarif
+          category: trivy-${{ matrix.service }}
+
+      # QUALITY GATE: fail the build on any fixable HIGH/CRITICAL vulnerability.
+      - name: Trivy security gate (HIGH/CRITICAL)
+        uses: aquasecurity/trivy-action@0.28.0
+        with:
+          scan-type: image
+          image-ref: ${{ steps.img.outputs.image }}:${{ steps.img.outputs.tag }}
+          severity: HIGH,CRITICAL
+          ignore-unfixed: true
+          exit-code: "1"
+          format: table
+
+      # Push only after the gate passes, and only on main / version tags.
+      - name: Push image
+        if: github.event_name == 'push'
+        run: |
+          docker push "${{ steps.img.outputs.image }}:${{ steps.img.outputs.tag }}"
+          # On a version tag (vX.Y.Z) also publish the semver tag.
+          if [[ "${GITHUB_REF}" == refs/tags/v* ]]; then
+            version="${GITHUB_REF#refs/tags/}"
+            docker tag "${{ steps.img.outputs.image }}:${{ steps.img.outputs.tag }}" \
+                       "${{ steps.img.outputs.image }}:${version}"
+            docker push "${{ steps.img.outputs.image }}:${version}"
+          fi
+
+  # ---------------------------------------------------------------------------
+  # 3. Deploy to Kubernetes (rolling update; rollback on failure)
+  # ---------------------------------------------------------------------------
+  deploy:
+    name: deploy to kubernetes
+    runs-on: ubuntu-latest
+    needs: build-scan-push
+    if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/v'))
+    environment: production
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Compute image refs
+        id: img
+        run: |
+          owner="$(echo '${{ github.repository_owner }}' | tr '[:upper:]' '[:lower:]')"
+          echo "prefix=${REGISTRY}/${owner}/ticketing" >> "$GITHUB_OUTPUT"
+          echo "tag=${GITHUB_SHA::12}" >> "$GITHUB_OUTPUT"
+
+      - name: Set up kubectl
+        uses: azure/setup-kubectl@v4
+
+      - name: Configure kubeconfig
+        run: |
+          mkdir -p "$HOME/.kube"
+          echo "${{ secrets.KUBE_CONFIG }}" | base64 -d > "$HOME/.kube/config"
+          chmod 600 "$HOME/.kube/config"
+          kubectl version --client
+
+      - name: Ensure namespace
+        run: kubectl get ns "$NAMESPACE" || kubectl create ns "$NAMESPACE"
+
+      # (Re)create the DB Secret from GitHub Secrets - never stored in Git.
+      - name: Apply database Secret
+        env:
+          POSTGRES_USER: ${{ vars.POSTGRES_USER || 'ticketing_user' }}
+          POSTGRES_PASSWORD: ${{ secrets.POSTGRES_PASSWORD }}
+        run: |
+          kubectl -n "$NAMESPACE" create secret generic ticketing-db-credentials \
+            --from-literal=POSTGRES_USER="$POSTGRES_USER" \
+            --from-literal=POSTGRES_PASSWORD="$POSTGRES_PASSWORD" \
+            --dry-run=client -o yaml | kubectl apply -f -
+
+      - name: Apply manifests
+        run: kubectl apply -k infra/k8s/
+
+      # Point each Deployment at the freshly built, scanned image (by commit SHA).
+      - name: Roll out new images
+        run: |
+          for svc in api worker frontend; do
+            kubectl -n "$NAMESPACE" set image "deploy/$svc" \
+              "$svc=${{ steps.img.outputs.prefix }}-$svc:${{ steps.img.outputs.tag }}"
+          done
+
+      # Wait for the rolling update; auto-rollback any deployment that fails.
+      - name: Wait for rollout (auto-rollback on failure)
+        run: |
+          set -e
+          for svc in postgres redis api worker frontend; do
+            if ! kubectl -n "$NAMESPACE" rollout status "deploy/$svc" --timeout=180s; then
+              echo "::error::Rollout of $svc failed - rolling back"
+              kubectl -n "$NAMESPACE" rollout undo "deploy/$svc" || true
+              exit 1
+            fi
+          done
+
+      - name: Post-deploy smoke check
+        run: |
+          kubectl -n "$NAMESPACE" get pods,svc,ingress
+          # Verify API readiness from inside the cluster.
+          kubectl -n "$NAMESPACE" run smoke-$RANDOM --rm -i --restart=Never \
+            --image=curlimages/curl:8.10.1 --quiet -- \
+            curl -fsS http://api:8080/readyz

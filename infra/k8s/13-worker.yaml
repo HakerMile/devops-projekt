@@ -1,0 +1,73 @@
+# The worker has no HTTP port and is not exposed by a Service. It consumes jobs
+# from the Redis queue and writes processed orders to PostgreSQL.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: worker
+  namespace: secure-event-ticketing
+  labels:
+    app: worker
+    tier: worker
+    app.kubernetes.io/name: worker
+    app.kubernetes.io/part-of: secure-event-ticketing
+spec:
+  replicas: 1
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 0
+      maxSurge: 1
+  selector:
+    matchLabels:
+      app: worker
+  template:
+    metadata:
+      labels:
+        app: worker
+        tier: worker
+        app.kubernetes.io/name: worker
+        app.kubernetes.io/part-of: secure-event-ticketing
+    spec:
+      serviceAccountName: ticketing-sa
+      automountServiceAccountToken: false
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        fsGroup: 1000
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: worker
+          image: ghcr.io/matej-basic/ticketing-worker:1.0.0
+          imagePullPolicy: IfNotPresent
+          envFrom:
+            - configMapRef:
+                name: ticketing-config
+            - secretRef:
+                name: ticketing-db-credentials
+          # No HTTP endpoint - liveness verifies the worker process is alive.
+          livenessProbe:
+            exec:
+              command: ["sh", "-c", "pgrep -f worker.js > /dev/null"]
+            initialDelaySeconds: 15
+            periodSeconds: 20
+            timeoutSeconds: 5
+            failureThreshold: 3
+          resources:
+            requests:
+              cpu: 100m
+              memory: 128Mi
+            limits:
+              cpu: 500m
+              memory: 256Mi
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: ["ALL"]
+          volumeMounts:
+            - name: tmp
+              mountPath: /tmp
+      volumes:
+        - name: tmp
+          emptyDir: {}

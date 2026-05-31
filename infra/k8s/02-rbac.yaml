@@ -1,0 +1,38 @@
+# Least-privilege access control.
+#
+# None of the application workloads need to talk to the Kubernetes API, so:
+#   - they run under a dedicated, non-default ServiceAccount;
+#   - their API token is NOT auto-mounted (set on each Deployment);
+#   - the bound Role grants only read access to ConfigMaps in this namespace,
+#     which is the minimal footprint that still demonstrates a working RBAC
+#     chain (ServiceAccount -> Role -> RoleBinding).
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: ticketing-sa
+  namespace: secure-event-ticketing
+automountServiceAccountToken: false
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: ticketing-config-reader
+  namespace: secure-event-ticketing
+rules:
+  - apiGroups: [""]
+    resources: ["configmaps"]
+    verbs: ["get", "list", "watch"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: ticketing-config-reader-binding
+  namespace: secure-event-ticketing
+subjects:
+  - kind: ServiceAccount
+    name: ticketing-sa
+    namespace: secure-event-ticketing
+roleRef:
+  kind: Role
+  name: ticketing-config-reader
+  apiGroup: rbac.authorization.k8s.io

@@ -1,0 +1,21 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+# NOTE: the Secret (04-secret.example.yaml) is intentionally NOT listed here.
+# Create it out-of-band first so credentials never live in version control:
+#   kubectl -n secure-event-ticketing create secret generic ticketing-db-credentials \
+#     --from-literal=POSTGRES_USER=ticketing_user \
+#     --from-literal=POSTGRES_PASSWORD="$(openssl rand -base64 24)"
+
+resources:
+  - 00-namespace.yaml
+  - 01-resourcequota.yaml
+  - 02-rbac.yaml
+  - 03-configmap.yaml
+  - 10-postgres.yaml
+  - 11-redis.yaml
+  - 12-api.yaml
+  - 13-worker.yaml
+  - 14-frontend.yaml
+  - 20-ingress.yaml
+  - 30-networkpolicy.yaml
