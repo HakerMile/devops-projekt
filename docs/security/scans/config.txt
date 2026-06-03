@@ -1,0 +1,1127 @@
+
+Report Summary
+
+┌──────────────────────────────────┬────────────┬───────────────────┐
+│              Target              │    Type    │ Misconfigurations │
+├──────────────────────────────────┼────────────┼───────────────────┤
+│ api/Containerfile                │ dockerfile │         1         │
+├──────────────────────────────────┼────────────┼───────────────────┤
+│ frontend/Containerfile           │ dockerfile │         1         │
+├──────────────────────────────────┼────────────┼───────────────────┤
+│ infra/k8s/00-namespace.yaml      │ kubernetes │         0         │
+├──────────────────────────────────┼────────────┼───────────────────┤
+│ infra/k8s/01-resourcequota.yaml  │ kubernetes │         3         │
+├──────────────────────────────────┼────────────┼───────────────────┤
+│ infra/k8s/02-rbac.yaml           │ kubernetes │         0         │
+├──────────────────────────────────┼────────────┼───────────────────┤
+│ infra/k8s/03-configmap.yaml      │ kubernetes │         1         │
+├──────────────────────────────────┼────────────┼───────────────────┤
+│ infra/k8s/04-secret.example.yaml │ kubernetes │         0         │
+├──────────────────────────────────┼────────────┼───────────────────┤
+│ infra/k8s/10-postgres.yaml       │ kubernetes │         9         │
+├──────────────────────────────────┼────────────┼───────────────────┤
+│ infra/k8s/11-redis.yaml          │ kubernetes │         6         │
+├──────────────────────────────────┼────────────┼───────────────────┤
+│ infra/k8s/12-api.yaml            │ kubernetes │         7         │
+├──────────────────────────────────┼────────────┼───────────────────┤
+│ infra/k8s/13-worker.yaml         │ kubernetes │         5         │
+├──────────────────────────────────┼────────────┼───────────────────┤
+│ infra/k8s/14-frontend.yaml       │ kubernetes │         7         │
+├──────────────────────────────────┼────────────┼───────────────────┤
+│ infra/k8s/20-ingress.yaml        │ kubernetes │         2         │
+├──────────────────────────────────┼────────────┼───────────────────┤
+│ infra/k8s/30-networkpolicy.yaml  │ kubernetes │        10         │
+├──────────────────────────────────┼────────────┼───────────────────┤
+│ worker/Containerfile             │ dockerfile │         1         │
+└──────────────────────────────────┴────────────┴───────────────────┘
+Legend:
+- '-': Not scanned
+- '0': Clean (no security findings detected)
+
+
+api/Containerfile (dockerfile)
+==============================
+Tests: 27 (SUCCESSES: 26, FAILURES: 1)
+Failures: 1 (UNKNOWN: 0, LOW: 1, MEDIUM: 0, HIGH: 0, CRITICAL: 0)
+
+DS-0026 (LOW): Add HEALTHCHECK instruction in your Dockerfile
+════════════════════════════════════════
+You should add HEALTHCHECK instruction in your docker container images to perform the health check on running containers.
+
+See https://avd.aquasec.com/misconfig/ds-0026
+────────────────────────────────────────
+
+
+
+frontend/Containerfile (dockerfile)
+===================================
+Tests: 27 (SUCCESSES: 26, FAILURES: 1)
+Failures: 1 (UNKNOWN: 0, LOW: 1, MEDIUM: 0, HIGH: 0, CRITICAL: 0)
+
+DS-0026 (LOW): Add HEALTHCHECK instruction in your Dockerfile
+════════════════════════════════════════
+You should add HEALTHCHECK instruction in your docker container images to perform the health check on running containers.
+
+See https://avd.aquasec.com/misconfig/ds-0026
+────────────────────────────────────────
+
+
+
+infra/k8s/01-resourcequota.yaml (kubernetes)
+============================================
+Tests: 119 (SUCCESSES: 116, FAILURES: 3)
+Failures: 3 (UNKNOWN: 0, LOW: 3, MEDIUM: 0, HIGH: 0, CRITICAL: 0)
+
+KSV-0039 (LOW): A LimitRange policy with a default requests and limits for each container should be configured
+════════════════════════════════════════
+Ensure that a LimitRange policy is configured to limit resource usage for namespaces or nodes
+
+See https://avd.aquasec.com/misconfig/ksv-0039
+────────────────────────────────────────
+ infra/k8s/01-resourcequota.yaml:9-16
+────────────────────────────────────────
+   9 ┌ spec:
+  10 │   hard:
+  11 │     requests.cpu: "2"
+  12 │     requests.memory: 2Gi
+  13 │     limits.cpu: "4"
+  14 │     limits.memory: 4Gi
+  15 │     pods: "20"
+  16 └     persistentvolumeclaims: "4"
+────────────────────────────────────────
+
+
+KSV-0039 (LOW): A LimitRange policy with a default requests and limits for each container should be configured
+════════════════════════════════════════
+Ensure that a LimitRange policy is configured to limit resource usage for namespaces or nodes
+
+See https://avd.aquasec.com/misconfig/ksv-0039
+────────────────────────────────────────
+ infra/k8s/01-resourcequota.yaml:22-33
+────────────────────────────────────────
+  22 ┌   namespace: secure-event-ticketing
+  23 │ spec:
+  24 │   limits:
+  25 │     - type: Container
+  26 │       default: # default limit if a container omits one
+  27 │         cpu: 250m
+  28 │         memory: 256Mi
+  29 │       defaultRequest: # default request if a container omits one
+  30 └         cpu: 100m
+  ..   
+────────────────────────────────────────
+
+
+KSV-0040 (LOW): A resource quota policy with hard memory and CPU limits should be configured per namespace
+════════════════════════════════════════
+Ensure that a ResourceQuota policy is configured to limit aggregate resource usage within a namespace
+
+See https://avd.aquasec.com/misconfig/ksv-0040
+────────────────────────────────────────
+ infra/k8s/01-resourcequota.yaml:22-33
+────────────────────────────────────────
+  22 ┌   namespace: secure-event-ticketing
+  23 │ spec:
+  24 │   limits:
+  25 │     - type: Container
+  26 │       default: # default limit if a container omits one
+  27 │         cpu: 250m
+  28 │         memory: 256Mi
+  29 │       defaultRequest: # default request if a container omits one
+  30 └         cpu: 100m
+  ..   
+────────────────────────────────────────
+
+
+
+infra/k8s/03-configmap.yaml (kubernetes)
+========================================
+Tests: 118 (SUCCESSES: 117, FAILURES: 1)
+Failures: 1 (UNKNOWN: 0, LOW: 0, MEDIUM: 1, HIGH: 0, CRITICAL: 0)
+
+KSV-01010 (MEDIUM): ConfigMap 'ticketing-config' in 'secure-event-ticketing' namespace stores sensitive contents in key(s) or value(s) '{"API_PORT", "FRONTEND_PORT", "POSTGRES_PORT", "REDIS_PORT"}'
+════════════════════════════════════════
+Storing sensitive content such as usernames and email addresses in configMaps is unsafe
+
+See https://avd.aquasec.com/misconfig/ksv-01010
+────────────────────────────────────────
+
+
+
+infra/k8s/10-postgres.yaml (kubernetes)
+=======================================
+Tests: 124 (SUCCESSES: 115, FAILURES: 9)
+Failures: 9 (UNKNOWN: 0, LOW: 8, MEDIUM: 0, HIGH: 1, CRITICAL: 0)
+
+KSV-0014 (HIGH): Container 'postgres' of Deployment 'postgres' should set 'securityContext.readOnlyRootFilesystem' to true
+════════════════════════════════════════
+An immutable root file system prevents applications from writing to their local disk. This can limit intrusions, as attackers will not be able to tamper with the file system or write foreign executables to disk.
+
+See https://avd.aquasec.com/misconfig/ksv-0014
+────────────────────────────────────────
+ infra/k8s/10-postgres.yaml:48-103
+────────────────────────────────────────
+  48 ┌       containers:
+  49 │         - name: postgres
+  50 │           image: postgres:16-alpine
+  51 │           ports:
+  52 │             - name: postgres
+  53 │               containerPort: 5432
+  54 │           env:
+  55 │             - name: POSTGRES_DB
+  56 └               valueFrom:
+  ..   
+────────────────────────────────────────
+
+
+KSV-0020 (LOW): Container 'postgres' of Deployment 'postgres' should set 'securityContext.runAsUser' > 10000
+════════════════════════════════════════
+Force the container to run with user ID > 10000 to avoid conflicts with the host’s user table.
+
+See https://avd.aquasec.com/misconfig/ksv-0020
+────────────────────────────────────────
+ infra/k8s/10-postgres.yaml:48-103
+────────────────────────────────────────
+  48 ┌       containers:
+  49 │         - name: postgres
+  50 │           image: postgres:16-alpine
+  51 │           ports:
+  52 │             - name: postgres
+  53 │               containerPort: 5432
+  54 │           env:
+  55 │             - name: POSTGRES_DB
+  56 └               valueFrom:
+  ..   
+────────────────────────────────────────
+
+
+KSV-0021 (LOW): Container 'postgres' of Deployment 'postgres' should set 'securityContext.runAsGroup' > 10000
+════════════════════════════════════════
+Force the container to run with group ID > 10000 to avoid conflicts with the host’s user table.
+
+See https://avd.aquasec.com/misconfig/ksv-0021
+────────────────────────────────────────
+ infra/k8s/10-postgres.yaml:48-103
+────────────────────────────────────────
+  48 ┌       containers:
+  49 │         - name: postgres
+  50 │           image: postgres:16-alpine
+  51 │           ports:
+  52 │             - name: postgres
+  53 │               containerPort: 5432
+  54 │           env:
+  55 │             - name: POSTGRES_DB
+  56 └               valueFrom:
+  ..   
+────────────────────────────────────────
+
+
+KSV-0039 (LOW): A LimitRange policy with a default requests and limits for each container should be configured
+════════════════════════════════════════
+Ensure that a LimitRange policy is configured to limit resource usage for namespaces or nodes
+
+See https://avd.aquasec.com/misconfig/ksv-0039
+────────────────────────────────────────
+ infra/k8s/10-postgres.yaml:9-13
+────────────────────────────────────────
+   9 ┌ spec:
+  10 │   accessModes: ["ReadWriteOnce"]
+  11 │   resources:
+  12 │     requests:
+  13 └       storage: 2Gi
+────────────────────────────────────────
+
+
+KSV-0039 (LOW): A LimitRange policy with a default requests and limits for each container should be configured
+════════════════════════════════════════
+Ensure that a LimitRange policy is configured to limit resource usage for namespaces or nodes
+
+See https://avd.aquasec.com/misconfig/ksv-0039
+────────────────────────────────────────
+ infra/k8s/10-postgres.yaml:24-110
+────────────────────────────────────────
+  24 ┌     app.kubernetes.io/part-of: secure-event-ticketing
+  25 │ spec:
+  26 │   replicas: 1
+  27 │   strategy:
+  28 │     type: Recreate # single RWO volume - cannot run two pods at once
+  29 │   selector:
+  30 │     matchLabels:
+  31 │       app: postgres
+  32 └   template:
+  ..   
+────────────────────────────────────────
+
+
+KSV-0039 (LOW): A LimitRange policy with a default requests and limits for each container should be configured
+════════════════════════════════════════
+Ensure that a LimitRange policy is configured to limit resource usage for namespaces or nodes
+
+See https://avd.aquasec.com/misconfig/ksv-0039
+────────────────────────────────────────
+ infra/k8s/10-postgres.yaml:119-126
+────────────────────────────────────────
+ 119 ┌     app: postgres
+ 120 │     tier: data
+ 121 │ spec:
+ 122 │   type: ClusterIP
+ 123 │   selector:
+ 124 │     app: postgres
+ 125 │   ports:
+ 126 └     - name: postgres
+────────────────────────────────────────
+
+
+KSV-0040 (LOW): A resource quota policy with hard memory and CPU limits should be configured per namespace
+════════════════════════════════════════
+Ensure that a ResourceQuota policy is configured to limit aggregate resource usage within a namespace
+
+See https://avd.aquasec.com/misconfig/ksv-0040
+────────────────────────────────────────
+ infra/k8s/10-postgres.yaml:9-13
+────────────────────────────────────────
+   9 ┌ spec:
+  10 │   accessModes: ["ReadWriteOnce"]
+  11 │   resources:
+  12 │     requests:
+  13 └       storage: 2Gi
+────────────────────────────────────────
+
+
+KSV-0040 (LOW): A resource quota policy with hard memory and CPU limits should be configured per namespace
+════════════════════════════════════════
+Ensure that a ResourceQuota policy is configured to limit aggregate resource usage within a namespace
+
+See https://avd.aquasec.com/misconfig/ksv-0040
+────────────────────────────────────────
+ infra/k8s/10-postgres.yaml:24-110
+────────────────────────────────────────
+  24 ┌     app.kubernetes.io/part-of: secure-event-ticketing
+  25 │ spec:
+  26 │   replicas: 1
+  27 │   strategy:
+  28 │     type: Recreate # single RWO volume - cannot run two pods at once
+  29 │   selector:
+  30 │     matchLabels:
+  31 │       app: postgres
+  32 └   template:
+  ..   
+────────────────────────────────────────
+
+
+KSV-0040 (LOW): A resource quota policy with hard memory and CPU limits should be configured per namespace
+════════════════════════════════════════
+Ensure that a ResourceQuota policy is configured to limit aggregate resource usage within a namespace
+
+See https://avd.aquasec.com/misconfig/ksv-0040
+────────────────────────────────────────
+ infra/k8s/10-postgres.yaml:119-126
+────────────────────────────────────────
+ 119 ┌     app: postgres
+ 120 │     tier: data
+ 121 │ spec:
+ 122 │   type: ClusterIP
+ 123 │   selector:
+ 124 │     app: postgres
+ 125 │   ports:
+ 126 └     - name: postgres
+────────────────────────────────────────
+
+
+
+infra/k8s/11-redis.yaml (kubernetes)
+====================================
+Tests: 121 (SUCCESSES: 115, FAILURES: 6)
+Failures: 6 (UNKNOWN: 0, LOW: 6, MEDIUM: 0, HIGH: 0, CRITICAL: 0)
+
+KSV-0020 (LOW): Container 'redis' of Deployment 'redis' should set 'securityContext.runAsUser' > 10000
+════════════════════════════════════════
+Force the container to run with user ID > 10000 to avoid conflicts with the host’s user table.
+
+See https://avd.aquasec.com/misconfig/ksv-0020
+────────────────────────────────────────
+ infra/k8s/11-redis.yaml:33-67
+────────────────────────────────────────
+  33 ┌         - name: redis
+  34 │           image: redis:7-alpine
+  35 │           args: ["redis-server", "--save", "60", "1", "--loglevel", "warning"]
+  36 │           ports:
+  37 │             - name: redis
+  38 │               containerPort: 6379
+  39 │           volumeMounts:
+  40 │             - name: data
+  41 └               mountPath: /data
+  ..   
+────────────────────────────────────────
+
+
+KSV-0021 (LOW): Container 'redis' of Deployment 'redis' should set 'securityContext.runAsGroup' > 10000
+════════════════════════════════════════
+Force the container to run with group ID > 10000 to avoid conflicts with the host’s user table.
+
+See https://avd.aquasec.com/misconfig/ksv-0021
+────────────────────────────────────────
+ infra/k8s/11-redis.yaml:33-67
+────────────────────────────────────────
+  33 ┌         - name: redis
+  34 │           image: redis:7-alpine
+  35 │           args: ["redis-server", "--save", "60", "1", "--loglevel", "warning"]
+  36 │           ports:
+  37 │             - name: redis
+  38 │               containerPort: 6379
+  39 │           volumeMounts:
+  40 │             - name: data
+  41 └               mountPath: /data
+  ..   
+────────────────────────────────────────
+
+
+KSV-0039 (LOW): A LimitRange policy with a default requests and limits for each container should be configured
+════════════════════════════════════════
+Ensure that a LimitRange policy is configured to limit resource usage for namespaces or nodes
+
+See https://avd.aquasec.com/misconfig/ksv-0039
+────────────────────────────────────────
+ infra/k8s/11-redis.yaml:11-72
+────────────────────────────────────────
+  11 ┌ spec:
+  12 │   replicas: 1
+  13 │   selector:
+  14 │     matchLabels:
+  15 │       app: redis
+  16 │   template:
+  17 │     metadata:
+  18 │       labels:
+  19 └         app: redis
+  ..   
+────────────────────────────────────────
+
+
+KSV-0039 (LOW): A LimitRange policy with a default requests and limits for each container should be configured
+════════════════════════════════════════
+Ensure that a LimitRange policy is configured to limit resource usage for namespaces or nodes
+
+See https://avd.aquasec.com/misconfig/ksv-0039
+────────────────────────────────────────
+ infra/k8s/11-redis.yaml:81-88
+────────────────────────────────────────
+  81 ┌     tier: data
+  82 │ spec:
+  83 │   type: ClusterIP
+  84 │   selector:
+  85 │     app: redis
+  86 │   ports:
+  87 │     - name: redis
+  88 └       port: 6379
+────────────────────────────────────────
+
+
+KSV-0040 (LOW): A resource quota policy with hard memory and CPU limits should be configured per namespace
+════════════════════════════════════════
+Ensure that a ResourceQuota policy is configured to limit aggregate resource usage within a namespace
+
+See https://avd.aquasec.com/misconfig/ksv-0040
+────────────────────────────────────────
+ infra/k8s/11-redis.yaml:11-72
+────────────────────────────────────────
+  11 ┌ spec:
+  12 │   replicas: 1
+  13 │   selector:
+  14 │     matchLabels:
+  15 │       app: redis
+  16 │   template:
+  17 │     metadata:
+  18 │       labels:
+  19 └         app: redis
+  ..   
+────────────────────────────────────────
+
+
+KSV-0040 (LOW): A resource quota policy with hard memory and CPU limits should be configured per namespace
+════════════════════════════════════════
+Ensure that a ResourceQuota policy is configured to limit aggregate resource usage within a namespace
+
+See https://avd.aquasec.com/misconfig/ksv-0040
+────────────────────────────────────────
+ infra/k8s/11-redis.yaml:81-88
+────────────────────────────────────────
+  81 ┌     tier: data
+  82 │ spec:
+  83 │   type: ClusterIP
+  84 │   selector:
+  85 │     app: redis
+  86 │   ports:
+  87 │     - name: redis
+  88 └       port: 6379
+────────────────────────────────────────
+
+
+
+infra/k8s/12-api.yaml (kubernetes)
+==================================
+Tests: 122 (SUCCESSES: 115, FAILURES: 7)
+Failures: 7 (UNKNOWN: 0, LOW: 6, MEDIUM: 1, HIGH: 0, CRITICAL: 0)
+
+KSV-0020 (LOW): Container 'api' of Deployment 'api' should set 'securityContext.runAsUser' > 10000
+════════════════════════════════════════
+Force the container to run with user ID > 10000 to avoid conflicts with the host’s user table.
+
+See https://avd.aquasec.com/misconfig/ksv-0020
+────────────────────────────────────────
+ infra/k8s/12-api.yaml:38-87
+────────────────────────────────────────
+  38 ┌         - name: api
+  39 │           image: ghcr.io/hakermile/ticketing-api:1.0.0
+  40 │           imagePullPolicy: IfNotPresent
+  41 │           ports:
+  42 │             - name: http
+  43 │               containerPort: 8080
+  44 │           envFrom:
+  45 │             - configMapRef:
+  46 └                 name: ticketing-config
+  ..   
+────────────────────────────────────────
+
+
+KSV-0021 (LOW): Container 'api' of Deployment 'api' should set 'securityContext.runAsGroup' > 10000
+════════════════════════════════════════
+Force the container to run with group ID > 10000 to avoid conflicts with the host’s user table.
+
+See https://avd.aquasec.com/misconfig/ksv-0021
+────────────────────────────────────────
+ infra/k8s/12-api.yaml:38-87
+────────────────────────────────────────
+  38 ┌         - name: api
+  39 │           image: ghcr.io/hakermile/ticketing-api:1.0.0
+  40 │           imagePullPolicy: IfNotPresent
+  41 │           ports:
+  42 │             - name: http
+  43 │               containerPort: 8080
+  44 │           envFrom:
+  45 │             - configMapRef:
+  46 └                 name: ticketing-config
+  ..   
+────────────────────────────────────────
+
+
+KSV-0039 (LOW): A LimitRange policy with a default requests and limits for each container should be configured
+════════════════════════════════════════
+Ensure that a LimitRange policy is configured to limit resource usage for namespaces or nodes
+
+See https://avd.aquasec.com/misconfig/ksv-0039
+────────────────────────────────────────
+ infra/k8s/12-api.yaml:11-90
+────────────────────────────────────────
+  11 ┌ spec:
+  12 │   replicas: 2 # multiple replicas enable zero-downtime rolling updates
+  13 │   strategy:
+  14 │     type: RollingUpdate
+  15 │     rollingUpdate:
+  16 │       maxUnavailable: 0
+  17 │       maxSurge: 1
+  18 │   selector:
+  19 └     matchLabels:
+  ..   
+────────────────────────────────────────
+
+
+KSV-0039 (LOW): A LimitRange policy with a default requests and limits for each container should be configured
+════════════════════════════════════════
+Ensure that a LimitRange policy is configured to limit resource usage for namespaces or nodes
+
+See https://avd.aquasec.com/misconfig/ksv-0039
+────────────────────────────────────────
+ infra/k8s/12-api.yaml:99-106
+────────────────────────────────────────
+  99 ┌     tier: api
+ 100 │ spec:
+ 101 │   type: ClusterIP
+ 102 │   selector:
+ 103 │     app: api
+ 104 │   ports:
+ 105 │     - name: http
+ 106 └       port: 8080
+────────────────────────────────────────
+
+
+KSV-0040 (LOW): A resource quota policy with hard memory and CPU limits should be configured per namespace
+════════════════════════════════════════
+Ensure that a ResourceQuota policy is configured to limit aggregate resource usage within a namespace
+
+See https://avd.aquasec.com/misconfig/ksv-0040
+────────────────────────────────────────
+ infra/k8s/12-api.yaml:11-90
+────────────────────────────────────────
+  11 ┌ spec:
+  12 │   replicas: 2 # multiple replicas enable zero-downtime rolling updates
+  13 │   strategy:
+  14 │     type: RollingUpdate
+  15 │     rollingUpdate:
+  16 │       maxUnavailable: 0
+  17 │       maxSurge: 1
+  18 │   selector:
+  19 └     matchLabels:
+  ..   
+────────────────────────────────────────
+
+
+KSV-0040 (LOW): A resource quota policy with hard memory and CPU limits should be configured per namespace
+════════════════════════════════════════
+Ensure that a ResourceQuota policy is configured to limit aggregate resource usage within a namespace
+
+See https://avd.aquasec.com/misconfig/ksv-0040
+────────────────────────────────────────
+ infra/k8s/12-api.yaml:99-106
+────────────────────────────────────────
+  99 ┌     tier: api
+ 100 │ spec:
+ 101 │   type: ClusterIP
+ 102 │   selector:
+ 103 │     app: api
+ 104 │   ports:
+ 105 │     - name: http
+ 106 └       port: 8080
+────────────────────────────────────────
+
+
+KSV-0125 (MEDIUM): Container api in deployment api (namespace: secure-event-ticketing) uses an image from an untrusted registry.
+════════════════════════════════════════
+Ensure that all containers use images only from trusted registry domains.
+
+See https://avd.aquasec.com/misconfig/ksv-0125
+────────────────────────────────────────
+ infra/k8s/12-api.yaml:38-87
+────────────────────────────────────────
+  38 ┌         - name: api
+  39 │           image: ghcr.io/hakermile/ticketing-api:1.0.0
+  40 │           imagePullPolicy: IfNotPresent
+  41 │           ports:
+  42 │             - name: http
+  43 │               containerPort: 8080
+  44 │           envFrom:
+  45 │             - configMapRef:
+  46 └                 name: ticketing-config
+  ..   
+────────────────────────────────────────
+
+
+
+infra/k8s/13-worker.yaml (kubernetes)
+=====================================
+Tests: 117 (SUCCESSES: 112, FAILURES: 5)
+Failures: 5 (UNKNOWN: 0, LOW: 4, MEDIUM: 1, HIGH: 0, CRITICAL: 0)
+
+KSV-0020 (LOW): Container 'worker' of Deployment 'worker' should set 'securityContext.runAsUser' > 10000
+════════════════════════════════════════
+Force the container to run with user ID > 10000 to avoid conflicts with the host’s user table.
+
+See https://avd.aquasec.com/misconfig/ksv-0020
+────────────────────────────────────────
+ infra/k8s/13-worker.yaml:40-70
+────────────────────────────────────────
+  40 ┌         - name: worker
+  41 │           image: ghcr.io/hakermile/ticketing-worker:1.0.0
+  42 │           imagePullPolicy: IfNotPresent
+  43 │           envFrom:
+  44 │             - configMapRef:
+  45 │                 name: ticketing-config
+  46 │             - secretRef:
+  47 │                 name: ticketing-db-credentials
+  48 └           # No HTTP endpoint - liveness verifies the worker process is alive.
+  ..   
+────────────────────────────────────────
+
+
+KSV-0021 (LOW): Container 'worker' of Deployment 'worker' should set 'securityContext.runAsGroup' > 10000
+════════════════════════════════════════
+Force the container to run with group ID > 10000 to avoid conflicts with the host’s user table.
+
+See https://avd.aquasec.com/misconfig/ksv-0021
+────────────────────────────────────────
+ infra/k8s/13-worker.yaml:40-70
+────────────────────────────────────────
+  40 ┌         - name: worker
+  41 │           image: ghcr.io/hakermile/ticketing-worker:1.0.0
+  42 │           imagePullPolicy: IfNotPresent
+  43 │           envFrom:
+  44 │             - configMapRef:
+  45 │                 name: ticketing-config
+  46 │             - secretRef:
+  47 │                 name: ticketing-db-credentials
+  48 └           # No HTTP endpoint - liveness verifies the worker process is alive.
+  ..   
+────────────────────────────────────────
+
+
+KSV-0039 (LOW): A LimitRange policy with a default requests and limits for each container should be configured
+════════════════════════════════════════
+Ensure that a LimitRange policy is configured to limit resource usage for namespaces or nodes
+
+See https://avd.aquasec.com/misconfig/ksv-0039
+────────────────────────────────────────
+ infra/k8s/13-worker.yaml:13-73
+────────────────────────────────────────
+  13 ┌ spec:
+  14 │   replicas: 1
+  15 │   strategy:
+  16 │     type: RollingUpdate
+  17 │     rollingUpdate:
+  18 │       maxUnavailable: 0
+  19 │       maxSurge: 1
+  20 │   selector:
+  21 └     matchLabels:
+  ..   
+────────────────────────────────────────
+
+
+KSV-0040 (LOW): A resource quota policy with hard memory and CPU limits should be configured per namespace
+════════════════════════════════════════
+Ensure that a ResourceQuota policy is configured to limit aggregate resource usage within a namespace
+
+See https://avd.aquasec.com/misconfig/ksv-0040
+────────────────────────────────────────
+ infra/k8s/13-worker.yaml:13-73
+────────────────────────────────────────
+  13 ┌ spec:
+  14 │   replicas: 1
+  15 │   strategy:
+  16 │     type: RollingUpdate
+  17 │     rollingUpdate:
+  18 │       maxUnavailable: 0
+  19 │       maxSurge: 1
+  20 │   selector:
+  21 └     matchLabels:
+  ..   
+────────────────────────────────────────
+
+
+KSV-0125 (MEDIUM): Container worker in deployment worker (namespace: secure-event-ticketing) uses an image from an untrusted registry.
+════════════════════════════════════════
+Ensure that all containers use images only from trusted registry domains.
+
+See https://avd.aquasec.com/misconfig/ksv-0125
+────────────────────────────────────────
+ infra/k8s/13-worker.yaml:40-70
+────────────────────────────────────────
+  40 ┌         - name: worker
+  41 │           image: ghcr.io/hakermile/ticketing-worker:1.0.0
+  42 │           imagePullPolicy: IfNotPresent
+  43 │           envFrom:
+  44 │             - configMapRef:
+  45 │                 name: ticketing-config
+  46 │             - secretRef:
+  47 │                 name: ticketing-db-credentials
+  48 └           # No HTTP endpoint - liveness verifies the worker process is alive.
+  ..   
+────────────────────────────────────────
+
+
+
+infra/k8s/14-frontend.yaml (kubernetes)
+=======================================
+Tests: 122 (SUCCESSES: 115, FAILURES: 7)
+Failures: 7 (UNKNOWN: 0, LOW: 6, MEDIUM: 1, HIGH: 0, CRITICAL: 0)
+
+KSV-0020 (LOW): Container 'frontend' of Deployment 'frontend' should set 'securityContext.runAsUser' > 10000
+════════════════════════════════════════
+Force the container to run with user ID > 10000 to avoid conflicts with the host’s user table.
+
+See https://avd.aquasec.com/misconfig/ksv-0020
+────────────────────────────────────────
+ infra/k8s/14-frontend.yaml:38-77
+────────────────────────────────────────
+  38 ┌         - name: frontend
+  39 │           image: ghcr.io/hakermile/ticketing-frontend:1.0.0
+  40 │           imagePullPolicy: IfNotPresent
+  41 │           ports:
+  42 │             - name: http
+  43 │               containerPort: 3000
+  44 │           envFrom:
+  45 │             - configMapRef:
+  46 └                 name: ticketing-config
+  ..   
+────────────────────────────────────────
+
+
+KSV-0021 (LOW): Container 'frontend' of Deployment 'frontend' should set 'securityContext.runAsGroup' > 10000
+════════════════════════════════════════
+Force the container to run with group ID > 10000 to avoid conflicts with the host’s user table.
+
+See https://avd.aquasec.com/misconfig/ksv-0021
+────────────────────────────────────────
+ infra/k8s/14-frontend.yaml:38-77
+────────────────────────────────────────
+  38 ┌         - name: frontend
+  39 │           image: ghcr.io/hakermile/ticketing-frontend:1.0.0
+  40 │           imagePullPolicy: IfNotPresent
+  41 │           ports:
+  42 │             - name: http
+  43 │               containerPort: 3000
+  44 │           envFrom:
+  45 │             - configMapRef:
+  46 └                 name: ticketing-config
+  ..   
+────────────────────────────────────────
+
+
+KSV-0039 (LOW): A LimitRange policy with a default requests and limits for each container should be configured
+════════════════════════════════════════
+Ensure that a LimitRange policy is configured to limit resource usage for namespaces or nodes
+
+See https://avd.aquasec.com/misconfig/ksv-0039
+────────────────────────────────────────
+ infra/k8s/14-frontend.yaml:11-80
+────────────────────────────────────────
+  11 ┌ spec:
+  12 │   replicas: 2
+  13 │   strategy:
+  14 │     type: RollingUpdate
+  15 │     rollingUpdate:
+  16 │       maxUnavailable: 0
+  17 │       maxSurge: 1
+  18 │   selector:
+  19 └     matchLabels:
+  ..   
+────────────────────────────────────────
+
+
+KSV-0039 (LOW): A LimitRange policy with a default requests and limits for each container should be configured
+════════════════════════════════════════
+Ensure that a LimitRange policy is configured to limit resource usage for namespaces or nodes
+
+See https://avd.aquasec.com/misconfig/ksv-0039
+────────────────────────────────────────
+ infra/k8s/14-frontend.yaml:89-96
+────────────────────────────────────────
+  89 ┌     tier: web
+  90 │ spec:
+  91 │   type: ClusterIP
+  92 │   selector:
+  93 │     app: frontend
+  94 │   ports:
+  95 │     - name: http
+  96 └       port: 3000
+────────────────────────────────────────
+
+
+KSV-0040 (LOW): A resource quota policy with hard memory and CPU limits should be configured per namespace
+════════════════════════════════════════
+Ensure that a ResourceQuota policy is configured to limit aggregate resource usage within a namespace
+
+See https://avd.aquasec.com/misconfig/ksv-0040
+────────────────────────────────────────
+ infra/k8s/14-frontend.yaml:11-80
+────────────────────────────────────────
+  11 ┌ spec:
+  12 │   replicas: 2
+  13 │   strategy:
+  14 │     type: RollingUpdate
+  15 │     rollingUpdate:
+  16 │       maxUnavailable: 0
+  17 │       maxSurge: 1
+  18 │   selector:
+  19 └     matchLabels:
+  ..   
+────────────────────────────────────────
+
+
+KSV-0040 (LOW): A resource quota policy with hard memory and CPU limits should be configured per namespace
+════════════════════════════════════════
+Ensure that a ResourceQuota policy is configured to limit aggregate resource usage within a namespace
+
+See https://avd.aquasec.com/misconfig/ksv-0040
+────────────────────────────────────────
+ infra/k8s/14-frontend.yaml:89-96
+────────────────────────────────────────
+  89 ┌     tier: web
+  90 │ spec:
+  91 │   type: ClusterIP
+  92 │   selector:
+  93 │     app: frontend
+  94 │   ports:
+  95 │     - name: http
+  96 └       port: 3000
+────────────────────────────────────────
+
+
+KSV-0125 (MEDIUM): Container frontend in deployment frontend (namespace: secure-event-ticketing) uses an image from an untrusted registry.
+════════════════════════════════════════
+Ensure that all containers use images only from trusted registry domains.
+
+See https://avd.aquasec.com/misconfig/ksv-0125
+────────────────────────────────────────
+ infra/k8s/14-frontend.yaml:38-77
+────────────────────────────────────────
+  38 ┌         - name: frontend
+  39 │           image: ghcr.io/hakermile/ticketing-frontend:1.0.0
+  40 │           imagePullPolicy: IfNotPresent
+  41 │           ports:
+  42 │             - name: http
+  43 │               containerPort: 3000
+  44 │           envFrom:
+  45 │             - configMapRef:
+  46 └                 name: ticketing-config
+  ..   
+────────────────────────────────────────
+
+
+
+infra/k8s/20-ingress.yaml (kubernetes)
+======================================
+Tests: 117 (SUCCESSES: 115, FAILURES: 2)
+Failures: 2 (UNKNOWN: 0, LOW: 2, MEDIUM: 0, HIGH: 0, CRITICAL: 0)
+
+KSV-0039 (LOW): A LimitRange policy with a default requests and limits for each container should be configured
+════════════════════════════════════════
+Ensure that a LimitRange policy is configured to limit resource usage for namespaces or nodes
+
+See https://avd.aquasec.com/misconfig/ksv-0039
+────────────────────────────────────────
+ infra/k8s/20-ingress.yaml:14-33
+────────────────────────────────────────
+  14 ┌ spec:
+  15 │   ingressClassName: nginx
+  16 │   rules:
+  17 │     - host: ticketing.local
+  18 │       http:
+  19 │         paths:
+  20 │           - path: /api
+  21 │             pathType: Prefix
+  22 └             backend:
+  ..   
+────────────────────────────────────────
+
+
+KSV-0040 (LOW): A resource quota policy with hard memory and CPU limits should be configured per namespace
+════════════════════════════════════════
+Ensure that a ResourceQuota policy is configured to limit aggregate resource usage within a namespace
+
+See https://avd.aquasec.com/misconfig/ksv-0040
+────────────────────────────────────────
+ infra/k8s/20-ingress.yaml:14-33
+────────────────────────────────────────
+  14 ┌ spec:
+  15 │   ingressClassName: nginx
+  16 │   rules:
+  17 │     - host: ticketing.local
+  18 │       http:
+  19 │         paths:
+  20 │           - path: /api
+  21 │             pathType: Prefix
+  22 └             backend:
+  ..   
+────────────────────────────────────────
+
+
+
+infra/k8s/30-networkpolicy.yaml (kubernetes)
+============================================
+Tests: 125 (SUCCESSES: 115, FAILURES: 10)
+Failures: 10 (UNKNOWN: 0, LOW: 10, MEDIUM: 0, HIGH: 0, CRITICAL: 0)
+
+KSV-0039 (LOW): A LimitRange policy with a default requests and limits for each container should be configured
+════════════════════════════════════════
+Ensure that a LimitRange policy is configured to limit resource usage for namespaces or nodes
+
+See https://avd.aquasec.com/misconfig/ksv-0039
+────────────────────────────────────────
+ infra/k8s/30-networkpolicy.yaml:23-25
+────────────────────────────────────────
+  23 ┌ spec:
+  24 │   podSelector: {}
+  25 └   policyTypes: ["Ingress"]
+────────────────────────────────────────
+
+
+KSV-0039 (LOW): A LimitRange policy with a default requests and limits for each container should be configured
+════════════════════════════════════════
+Ensure that a LimitRange policy is configured to limit resource usage for namespaces or nodes
+
+See https://avd.aquasec.com/misconfig/ksv-0039
+────────────────────────────────────────
+ infra/k8s/30-networkpolicy.yaml:32-40
+────────────────────────────────────────
+  32 ┌   namespace: secure-event-ticketing
+  33 │ spec:
+  34 │   podSelector:
+  35 │     matchLabels:
+  36 │       app: frontend
+  37 │   policyTypes: ["Ingress"]
+  38 │   ingress:
+  39 │     - ports:
+  40 └         - protocol: TCP
+────────────────────────────────────────
+
+
+KSV-0039 (LOW): A LimitRange policy with a default requests and limits for each container should be configured
+════════════════════════════════════════
+Ensure that a LimitRange policy is configured to limit resource usage for namespaces or nodes
+
+See https://avd.aquasec.com/misconfig/ksv-0039
+────────────────────────────────────────
+ infra/k8s/30-networkpolicy.yaml:48-56
+────────────────────────────────────────
+  48 ┌   name: allow-api-ingress
+  49 │   namespace: secure-event-ticketing
+  50 │ spec:
+  51 │   podSelector:
+  52 │     matchLabels:
+  53 │       app: api
+  54 │   policyTypes: ["Ingress"]
+  55 │   ingress:
+  56 └     - ports:
+────────────────────────────────────────
+
+
+KSV-0039 (LOW): A LimitRange policy with a default requests and limits for each container should be configured
+════════════════════════════════════════
+Ensure that a LimitRange policy is configured to limit resource usage for namespaces or nodes
+
+See https://avd.aquasec.com/misconfig/ksv-0039
+────────────────────────────────────────
+ infra/k8s/30-networkpolicy.yaml:63-78
+────────────────────────────────────────
+  63 ┌ metadata:
+  64 │   name: allow-postgres-from-app
+  65 │   namespace: secure-event-ticketing
+  66 │ spec:
+  67 │   podSelector:
+  68 │     matchLabels:
+  69 │       app: postgres
+  70 │   policyTypes: ["Ingress"]
+  71 └   ingress:
+  ..   
+────────────────────────────────────────
+
+
+KSV-0039 (LOW): A LimitRange policy with a default requests and limits for each container should be configured
+════════════════════════════════════════
+Ensure that a LimitRange policy is configured to limit resource usage for namespaces or nodes
+
+See https://avd.aquasec.com/misconfig/ksv-0039
+────────────────────────────────────────
+ infra/k8s/30-networkpolicy.yaml:85-100
+────────────────────────────────────────
+  85 ┌ kind: NetworkPolicy
+  86 │ metadata:
+  87 │   name: allow-redis-from-app
+  88 │   namespace: secure-event-ticketing
+  89 │ spec:
+  90 │   podSelector:
+  91 │     matchLabels:
+  92 │       app: redis
+  93 └   policyTypes: ["Ingress"]
+  ..   
+────────────────────────────────────────
+
+
+KSV-0040 (LOW): A resource quota policy with hard memory and CPU limits should be configured per namespace
+════════════════════════════════════════
+Ensure that a ResourceQuota policy is configured to limit aggregate resource usage within a namespace
+
+See https://avd.aquasec.com/misconfig/ksv-0040
+────────────────────────────────────────
+ infra/k8s/30-networkpolicy.yaml:23-25
+────────────────────────────────────────
+  23 ┌ spec:
+  24 │   podSelector: {}
+  25 └   policyTypes: ["Ingress"]
+────────────────────────────────────────
+
+
+KSV-0040 (LOW): A resource quota policy with hard memory and CPU limits should be configured per namespace
+════════════════════════════════════════
+Ensure that a ResourceQuota policy is configured to limit aggregate resource usage within a namespace
+
+See https://avd.aquasec.com/misconfig/ksv-0040
+────────────────────────────────────────
+ infra/k8s/30-networkpolicy.yaml:32-40
+────────────────────────────────────────
+  32 ┌   namespace: secure-event-ticketing
+  33 │ spec:
+  34 │   podSelector:
+  35 │     matchLabels:
+  36 │       app: frontend
+  37 │   policyTypes: ["Ingress"]
+  38 │   ingress:
+  39 │     - ports:
+  40 └         - protocol: TCP
+────────────────────────────────────────
+
+
+KSV-0040 (LOW): A resource quota policy with hard memory and CPU limits should be configured per namespace
+════════════════════════════════════════
+Ensure that a ResourceQuota policy is configured to limit aggregate resource usage within a namespace
+
+See https://avd.aquasec.com/misconfig/ksv-0040
+────────────────────────────────────────
+ infra/k8s/30-networkpolicy.yaml:48-56
+────────────────────────────────────────
+  48 ┌   name: allow-api-ingress
+  49 │   namespace: secure-event-ticketing
+  50 │ spec:
+  51 │   podSelector:
+  52 │     matchLabels:
+  53 │       app: api
+  54 │   policyTypes: ["Ingress"]
+  55 │   ingress:
+  56 └     - ports:
+────────────────────────────────────────
+
+
+KSV-0040 (LOW): A resource quota policy with hard memory and CPU limits should be configured per namespace
+════════════════════════════════════════
+Ensure that a ResourceQuota policy is configured to limit aggregate resource usage within a namespace
+
+See https://avd.aquasec.com/misconfig/ksv-0040
+────────────────────────────────────────
+ infra/k8s/30-networkpolicy.yaml:63-78
+────────────────────────────────────────
+  63 ┌ metadata:
+  64 │   name: allow-postgres-from-app
+  65 │   namespace: secure-event-ticketing
+  66 │ spec:
+  67 │   podSelector:
+  68 │     matchLabels:
+  69 │       app: postgres
+  70 │   policyTypes: ["Ingress"]
+  71 └   ingress:
+  ..   
+────────────────────────────────────────
+
+
+KSV-0040 (LOW): A resource quota policy with hard memory and CPU limits should be configured per namespace
+════════════════════════════════════════
+Ensure that a ResourceQuota policy is configured to limit aggregate resource usage within a namespace
+
+See https://avd.aquasec.com/misconfig/ksv-0040
+────────────────────────────────────────
+ infra/k8s/30-networkpolicy.yaml:85-100
+────────────────────────────────────────
+  85 ┌ kind: NetworkPolicy
+  86 │ metadata:
+  87 │   name: allow-redis-from-app
+  88 │   namespace: secure-event-ticketing
+  89 │ spec:
+  90 │   podSelector:
+  91 │     matchLabels:
+  92 │       app: redis
+  93 └   policyTypes: ["Ingress"]
+  ..   
+────────────────────────────────────────
+
+
+
+worker/Containerfile (dockerfile)
+=================================
+Tests: 27 (SUCCESSES: 26, FAILURES: 1)
+Failures: 1 (UNKNOWN: 0, LOW: 1, MEDIUM: 0, HIGH: 0, CRITICAL: 0)
+
+DS-0026 (LOW): Add HEALTHCHECK instruction in your Dockerfile
+════════════════════════════════════════
+You should add HEALTHCHECK instruction in your docker container images to perform the health check on running containers.
+
+See https://avd.aquasec.com/misconfig/ds-0026
+────────────────────────────────────────
+
+
