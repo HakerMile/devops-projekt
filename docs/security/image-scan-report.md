@@ -20,7 +20,7 @@ for svc in api worker frontend; do
     --ignore-unfixed \
     --exit-code 1 \
     --format table \
-    ghcr.io/matej-basic/ticketing-$svc:1.0.0
+    ghcr.io/hakermile/ticketing-$svc:1.0.0
 done
 
 # 2) skeniranje baznih/third-party slika
@@ -34,7 +34,7 @@ trivy config ./api ./worker ./frontend
 trivy config ./infra/k8s
 
 # 5) SBOM (za evidenciju / supply chain)
-trivy image --format cyclonedx -o sbom-api.cdx.json ghcr.io/matej-basic/ticketing-api:1.0.0
+trivy image --format cyclonedx -o sbom-api.cdx.json ghcr.io/hakermile/ticketing-api:1.0.0
 ```
 
 ## Sažetak nalaza (vulnerabilities)
@@ -99,7 +99,7 @@ i prihvaćen rizik do nadogradnje; ne blokira aplikacijske slike.
 - name: Trivy scan (quality gate)
   uses: aquasecurity/trivy-action@master
   with:
-    image-ref: ghcr.io/matej-basic/ticketing-api:${{ github.sha }}
+    image-ref: ghcr.io/hakermile/ticketing-api:${{ github.sha }}
     severity: HIGH,CRITICAL
     ignore-unfixed: true
     exit-code: '1'      # build pada ako se nađe fixabilni HIGH/CRITICAL

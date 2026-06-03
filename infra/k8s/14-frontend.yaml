@@ -36,7 +36,7 @@ spec:
           type: RuntimeDefault
       containers:
         - name: frontend
-          image: ghcr.io/matej-basic/ticketing-frontend:1.0.0
+          image: ghcr.io/hakermile/ticketing-frontend:1.0.0
           imagePullPolicy: IfNotPresent
           ports:
             - name: http

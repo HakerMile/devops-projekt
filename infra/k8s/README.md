@@ -31,22 +31,22 @@ health probe, resource limite, Ingress i rolling update/rollback.
 
 ## 1. Build i objava slika
 
-Manifesti referenciraju `ghcr.io/matej-basic/ticketing-<servis>:1.0.0`. Prilagodi
+Manifesti referenciraju `ghcr.io/hakermile/ticketing-<servis>:1.0.0`. Prilagodi
 registry/tag svojem okruženju.
 
 ```bash
 # build (zadani runtime target = minimalna non-root slika)
-docker build -t ghcr.io/matej-basic/ticketing-api:1.0.0 ./api
-docker build -t ghcr.io/matej-basic/ticketing-worker:1.0.0 ./worker
-docker build -t ghcr.io/matej-basic/ticketing-frontend:1.0.0 ./frontend
+docker build -t ghcr.io/hakermile/ticketing-api:1.0.0 ./api
+docker build -t ghcr.io/hakermile/ticketing-worker:1.0.0 ./worker
+docker build -t ghcr.io/hakermile/ticketing-frontend:1.0.0 ./frontend
 
 # skeniranje prije objave (quality gate - vidi docs/security/image-scan-report.md)
-trivy image --severity HIGH,CRITICAL --exit-code 1 ghcr.io/matej-basic/ticketing-api:1.0.0
+trivy image --severity HIGH,CRITICAL --exit-code 1 ghcr.io/hakermile/ticketing-api:1.0.0
 
 # push
-docker push ghcr.io/matej-basic/ticketing-api:1.0.0
-docker push ghcr.io/matej-basic/ticketing-worker:1.0.0
-docker push ghcr.io/matej-basic/ticketing-frontend:1.0.0
+docker push ghcr.io/hakermile/ticketing-api:1.0.0
+docker push ghcr.io/hakermile/ticketing-worker:1.0.0
+docker push ghcr.io/hakermile/ticketing-frontend:1.0.0
 ```
 
 > **Politika tagova:** koristi nepromjenjive verzijske tagove (`1.0.0`,
@@ -110,7 +110,7 @@ non-root i kompatibilne s `restricted` SCC-om.
 
 ```bash
 # rolling update na novu verziju (maxUnavailable=0 -> bez downtimea)
-kubectl -n secure-event-ticketing set image deploy/api api=ghcr.io/matej-basic/ticketing-api:1.1.0
+kubectl -n secure-event-ticketing set image deploy/api api=ghcr.io/hakermile/ticketing-api:1.1.0
 kubectl -n secure-event-ticketing rollout status deploy/api
 
 # povijest i rollback

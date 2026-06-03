@@ -87,7 +87,7 @@ k rollout undo deploy/api
 k rollout status deploy/api
 
 # B) ili postavi ispravan, postojeći tag
-k set image deploy/api api=ghcr.io/matej-basic/ticketing-api:1.0.0
+k set image deploy/api api=ghcr.io/hakermile/ticketing-api:1.0.0
 k rollout status deploy/api
 
 # ako je problem autorizacija na privatni registry:
