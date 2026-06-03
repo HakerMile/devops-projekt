@@ -4,6 +4,14 @@ Referentni uzorak aplikacije za kolegij **Uvod u DevOps - DevSecOps** (Algebra
 Bernays). Pokriva cijeli tok: lokalni razvoj kroz Compose i produkcijski
 deployment kroz Kubernetes manifeste.
 
+### Dokumentacija
+- [`docs/architecture.md`](docs/architecture.md) — arhitektura, kontejneri vs VM, servisi i komunikacija (I1)
+- [`docs/devsecops.md`](docs/devsecops.md) — sigurnosne kontrole, alati, tajne, nalazi→mjere (I2/I4)
+- [`infra/k8s/README.md`](infra/k8s/README.md) — produkcijski deployment (I6)
+- [`docs/runbook.md`](docs/runbook.md) — incidentni runbook (I5)
+- [`docs/security/image-scan-report.md`](docs/security/image-scan-report.md) — Trivy izvješće (I2)
+- [`docs/SUBMISSION-CHECKLIST.md`](docs/SUBMISSION-CHECKLIST.md) — popis evidencije za predaju (I1–I6)
+
 ## Arhitektura
 
 | Servis      | Uloga                                              | Tehnologija        |
