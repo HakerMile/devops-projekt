@@ -208,7 +208,14 @@ Build + scan se izvršavaju na svakom push/PR; **push slika i deploy** samo na
 `main` i `v*` tagovima. Slike se tagiraju nepromjenjivim commit SHA (+ semver na tagu).
 
 **Potrebne GitHub postavke** (Settings → Secrets and variables):
-- Secret `KUBE_CONFIG` — base64 kubeconfig ciljanog klastera
 - Secret `POSTGRES_PASSWORD` — lozinka baze (pipeline kreira k8s Secret)
 - (opc.) Variable `POSTGRES_USER` — default `ticketing_user`
 - `GITHUB_TOKEN` se koristi automatski za push na GHCR
+
+> **`deploy` job (CI → klaster) je opcionalan.** Pokreće se samo ako postaviš
+> Variable `ENABLE_DEPLOY=true` **i** Secret `KUBE_CONFIG` (base64 kubeconfig
+> klastera dostupnog s interneta). Dok je ugašen, pipeline ostaje zelen bez
+> klastera. Lokalni kind klaster je dovoljan za demonstraciju orkestracije (I6) —
+> vidi [`docs/PREREQUISITES.md`](docs/PREREQUISITES.md). Lokalni kind **ne** može
+> služiti kao CI cilj jer mu je API na `127.0.0.1` (nedostupno cloud runneru);
+> za CI deploy treba managed klaster ili self-hosted runner.
