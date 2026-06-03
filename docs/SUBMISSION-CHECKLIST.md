@@ -97,7 +97,8 @@ curl localhost:8080/tickets/orders     # 📸 status "processed"
 # UI: http://localhost:3000            # 📸
 
 # --- Slika: minimalna + non-root ---
-docker build -t ticketing-api:local ./api
+# NAPOMENA: datoteka je `Containerfile` (ne `Dockerfile`) -> nužan je `-f`.
+docker build -t ticketing-api:local -f ./api/Containerfile ./api
 docker image ls ticketing-api:local    # 📸 veličina
 docker run --rm ticketing-api:local id # 📸 uid=1000
 
@@ -106,8 +107,9 @@ docker run --rm ticketing-api:local id # 📸 uid=1000
 
 # --- 2. dio: Kubernetes ---
 kind create cluster --name ticketing
+# build sve tri runtime slike (s -f) i učitaj ih u kind
 for s in api worker frontend; do
-  docker tag ticketing-$s:local ghcr.io/hakermile/ticketing-$s:1.0.0
+  docker build -t ghcr.io/hakermile/ticketing-$s:1.0.0 -f ./$s/Containerfile ./$s
   kind load docker-image ghcr.io/hakermile/ticketing-$s:1.0.0 --name ticketing
 done
 kubectl create ns secure-event-ticketing
@@ -117,16 +119,26 @@ kubectl -n secure-event-ticketing create secret generic ticketing-db-credentials
 kubectl apply -k infra/k8s/
 kubectl -n secure-event-ticketing get pods            # 📸 svi Ready
 kubectl -n secure-event-ticketing describe deploy/api # 📸 probe + resursi
+# funkcionalni test (port-forward pa kupnja):
+kubectl -n secure-event-ticketing port-forward svc/api 18080:8080 &
+curl -X POST localhost:18080/tickets/purchase -H 'Content-Type: application/json' \
+  -d '{"eventId":"evt-1001","customerEmail":"k8s@example.com","quantity":2}'
+curl localhost:18080/tickets/orders                   # 📸 status "processed"
 
 # --- Rolling update + rollback ---
+docker build -t ghcr.io/hakermile/ticketing-api:1.0.1 -f ./api/Containerfile ./api
+kind load docker-image ghcr.io/hakermile/ticketing-api:1.0.1 --name ticketing
 kubectl -n secure-event-ticketing set image deploy/api api=ghcr.io/hakermile/ticketing-api:1.0.1
 kubectl -n secure-event-ticketing rollout status deploy/api   # 📸
 kubectl -n secure-event-ticketing rollout history deploy/api  # 📸
 kubectl -n secure-event-ticketing rollout undo deploy/api     # 📸
 
 # --- NetworkPolicy segmentacija (frontend NE smije do baze) ---
+# VAŽNO: kind-ov zadani CNI (kindnet) NE provodi NetworkPolicy - test će proći (exit=0).
+# Za stvarnu provjeru kreiraj klaster s Calico CNI-jem (`--disable-default-cni`)
+# ili koristi managed klaster koji podržava NetworkPolicy.
 kubectl -n secure-event-ticketing exec deploy/frontend -- \
-  sh -c 'timeout 3 nc -z postgres 5432; echo exit=$?'   # 📸 očekivano: blokirano
+  sh -c 'timeout 3 nc -z postgres 5432; echo exit=$?'   # 📸 (blokirano samo uz CNI s NP)
 ```
 
 ## Što još (opcionalno) podiže ocjenu

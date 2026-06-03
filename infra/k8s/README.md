@@ -36,9 +36,9 @@ registry/tag svojem okruženju.
 
 ```bash
 # build (zadani runtime target = minimalna non-root slika)
-docker build -t ghcr.io/hakermile/ticketing-api:1.0.0 ./api
-docker build -t ghcr.io/hakermile/ticketing-worker:1.0.0 ./worker
-docker build -t ghcr.io/hakermile/ticketing-frontend:1.0.0 ./frontend
+docker build -t ghcr.io/hakermile/ticketing-api:1.0.0 -f ./api/Containerfile ./api
+docker build -t ghcr.io/hakermile/ticketing-worker:1.0.0 -f ./worker/Containerfile ./worker
+docker build -t ghcr.io/hakermile/ticketing-frontend:1.0.0 -f ./frontend/Containerfile ./frontend
 
 # skeniranje prije objave (quality gate - vidi docs/security/image-scan-report.md)
 trivy image --severity HIGH,CRITICAL --exit-code 1 ghcr.io/hakermile/ticketing-api:1.0.0

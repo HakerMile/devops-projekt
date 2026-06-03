@@ -5,6 +5,7 @@ Bernays). Pokriva cijeli tok: lokalni razvoj kroz Compose i produkcijski
 deployment kroz Kubernetes manifeste.
 
 ### Dokumentacija
+- [`docs/PREREQUISITES.md`](docs/PREREQUISITES.md) — instalacija okruženja (Docker, kubectl, kind, Trivy)
 - [`docs/architecture.md`](docs/architecture.md) — arhitektura, kontejneri vs VM, servisi i komunikacija (I1)
 - [`docs/devsecops.md`](docs/devsecops.md) — sigurnosne kontrole, alati, tajne, nalazi→mjere (I2/I4)
 - [`infra/k8s/README.md`](infra/k8s/README.md) — produkcijski deployment (I6)
@@ -172,9 +173,9 @@ Compose namjerno gradi `dev` stage radi hot-reloada. Minimalna non-root
 produkcijska slika (zadani `runtime` target) gradi se ovako:
 
 ```bash
-docker build -t ticketing-api:local ./api
-docker build -t ticketing-frontend:local ./frontend
-docker build -t ticketing-worker:local ./worker
+docker build -t ticketing-api:local -f ./api/Containerfile ./api
+docker build -t ticketing-frontend:local -f ./frontend/Containerfile ./frontend
+docker build -t ticketing-worker:local -f ./worker/Containerfile ./worker
 ```
 
 Ove slike se kasnije skeniraju (Trivy) i deployaju na Kubernetes/OpenShift
