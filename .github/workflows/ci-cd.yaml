@@ -117,6 +117,7 @@ jobs:
           severity: HIGH,CRITICAL
           exit-code: "1" # fail on misconfigured Dockerfiles/manifests
           format: table
+          trivyignores: .trivyignore # documented accepted risks
 
   # ---------------------------------------------------------------------------
   # 2. Build -> scan (gate) -> push, one job per service
@@ -194,6 +195,7 @@ jobs:
           severity: HIGH,CRITICAL
           ignore-unfixed: true
           exit-code: "1"
+          trivyignores: .trivyignore # documented accepted risks
           format: table
 
       # Push only after the gate passes, and only on main / version tags.

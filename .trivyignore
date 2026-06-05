@@ -1,0 +1,21 @@
+# =============================================================================
+# Trivy ignore file — DOKUMENTIRANI PRIHVAĆENI RIZICI (risk acceptance register)
+#
+# Svaka iznimka je svjesna odluka s obrazloženjem i mitigacijom. Vidi i
+# docs/devsecops.md (tablica nalaz → korektivna mjera). Iznimke se periodično
+# revidiraju (npr. pri nadogradnji baznih slika).
+# =============================================================================
+
+# --- Misconfiguracija manifesta ---------------------------------------------
+# KSV-0014: PostgreSQL kontejner nema readOnlyRootFilesystem=true.
+# Razlog: službena postgres slika piše izvan PVC-a (npr. /var/run/postgresql,
+# /tmp), pa read-only root onemogućuje pokretanje. Rizik je smanjen drugim
+# kontrolama: runAsNonRoot, drop ALL capabilities, seccompProfile RuntimeDefault.
+KSV-0014
+
+# --- Ranjivost u baznoj slici -----------------------------------------------
+# CVE-2026-33671 (picomatch, HIGH, ReDoS): prisutan SAMO u ugrađenom npm-u
+# bazne slike (usr/local/lib/node_modules/npm/...), a aplikacija u runtimeu
+# pokreće `node src/server.js` i ne koristi npm. Nije iskoristivo u našem
+# kontekstu; nestat će nadogradnjom bazne slike (node:22-alpine) na noviji digest.
+CVE-2026-33671
