@@ -109,15 +109,17 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Install Trivy
+        run: |
+          mkdir -p "$HOME/.local/bin"
+          curl -sfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh \
+            | sh -s -- -b "$HOME/.local/bin"
+          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+
       - name: Trivy config scan (Containerfiles + k8s manifests)
-        uses: aquasecurity/trivy-action@v0.29.0
-        with:
-          scan-type: config
-          scan-ref: .
-          severity: HIGH,CRITICAL
-          exit-code: "1" # fail on misconfigured Dockerfiles/manifests
-          format: table
-          trivyignores: .trivyignore # documented accepted risks
+        run: |
+          trivy config --severity HIGH,CRITICAL --exit-code 1 \
+            --ignorefile .trivyignore --format table .
 
   # ---------------------------------------------------------------------------
   # 2. Build -> scan (gate) -> push, one job per service
@@ -168,16 +170,19 @@ jobs:
           cache-from: type=gha,scope=${{ matrix.service }}
           cache-to: type=gha,scope=${{ matrix.service }},mode=max
 
+      - name: Install Trivy
+        run: |
+          mkdir -p "$HOME/.local/bin"
+          curl -sfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh \
+            | sh -s -- -b "$HOME/.local/bin"
+          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+
       # Produce SARIF for the GitHub Security tab (does not fail the build).
       - name: Trivy scan (SARIF report)
-        uses: aquasecurity/trivy-action@v0.29.0
-        with:
-          scan-type: image
-          image-ref: ${{ steps.img.outputs.image }}:${{ steps.img.outputs.tag }}
-          format: sarif
-          output: trivy-${{ matrix.service }}.sarif
-          severity: HIGH,CRITICAL,MEDIUM
-          exit-code: "0"
+        run: |
+          trivy image --format sarif --output trivy-${{ matrix.service }}.sarif \
+            --severity HIGH,CRITICAL,MEDIUM --exit-code 0 \
+            ${{ steps.img.outputs.image }}:${{ steps.img.outputs.tag }}
 
       - name: Upload SARIF to GitHub Security
         if: always()
@@ -189,14 +194,10 @@ jobs:
 
       # QUALITY GATE: fail the build on any fixable HIGH/CRITICAL vulnerability.
       - name: Trivy security gate (HIGH/CRITICAL)
-        uses: aquasecurity/trivy-action@v0.29.0
-        with:
-          scan-type: image
-          image-ref: ${{ steps.img.outputs.image }}:${{ steps.img.outputs.tag }}
-          severity: HIGH,CRITICAL
-          ignore-unfixed: true
-          exit-code: "1"
-          trivyignores: .trivyignore # documented accepted risks
+        run: |
+          trivy image --severity HIGH,CRITICAL --ignore-unfixed --exit-code 1 \
+            --ignorefile .trivyignore --format table \
+            ${{ steps.img.outputs.image }}:${{ steps.img.outputs.tag }}
           format: table
 
       # Push only after the gate passes, and only on main / version tags.
