@@ -198,7 +198,6 @@ jobs:
           trivy image --severity HIGH,CRITICAL --ignore-unfixed --exit-code 1 \
             --ignorefile .trivyignore --format table \
             ${{ steps.img.outputs.image }}:${{ steps.img.outputs.tag }}
-          format: table
 
       # Push only after the gate passes, and only on main / version tags.
       - name: Push image
