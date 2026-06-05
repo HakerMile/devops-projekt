@@ -110,7 +110,7 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: Trivy config scan (Containerfiles + k8s manifests)
-        uses: aquasecurity/trivy-action@0.28.0
+        uses: aquasecurity/trivy-action@v0.29.0
         with:
           scan-type: config
           scan-ref: .
@@ -170,7 +170,7 @@ jobs:
 
       # Produce SARIF for the GitHub Security tab (does not fail the build).
       - name: Trivy scan (SARIF report)
-        uses: aquasecurity/trivy-action@0.28.0
+        uses: aquasecurity/trivy-action@v0.29.0
         with:
           scan-type: image
           image-ref: ${{ steps.img.outputs.image }}:${{ steps.img.outputs.tag }}
@@ -188,7 +188,7 @@ jobs:
 
       # QUALITY GATE: fail the build on any fixable HIGH/CRITICAL vulnerability.
       - name: Trivy security gate (HIGH/CRITICAL)
-        uses: aquasecurity/trivy-action@0.28.0
+        uses: aquasecurity/trivy-action@v0.29.0
         with:
           scan-type: image
           image-ref: ${{ steps.img.outputs.image }}:${{ steps.img.outputs.tag }}
